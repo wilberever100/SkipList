@@ -83,6 +83,49 @@ class SkipList {
     }
   }
 
+  bool remove(const data_type& data) {
+    std::vector<Node*> predecessor;
+    Node* it = find(data, &predecessor);
+
+    if (it == nullptr || it->value_ != data) {
+      return false;
+    }
+
+    for (unsigned int i = 0; i < current_level_; ++i) {
+      if (predecessor[i]->forward_[i] != it) {
+        break;
+      }
+      predecessor[i]->forward_[i] = it->forward_[i];
+    }
+    delete it;
+    while (1 < current_level_ && header_.forward_[current_level_ - 1] == 0) {
+      --current_level_;
+    }
+    return true;
+  }
+
+  bool contains(const data_type& data) {
+    std::vector<Node*> predecessor;
+    Node* it = find(data, &predecessor);
+
+    return (it != nullptr && it->value_ == data);
+  }
+
+  void clear() {
+    Node* it = header_.forward_[0];
+    while (it != nullptr) {
+      Node* ptr = it->forward_[0];
+      delete it;
+      it = ptr;
+    }
+    for (unsigned int i = 0; i < current_level_; ++i) {
+      header_.forward_[i] = nullptr;
+    }
+    current_level_ = 1;
+  }
+
+  bool empty() const { return header_.forward_[0] == nullptr; }
+
   virtual ~SkipList() {
     Node* it = header_.forward_[0];
     while (it) {
