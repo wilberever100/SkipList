@@ -86,6 +86,7 @@ void TestSequential() {
         test.remove(2);
         test.remove(1);
         assert(!test.contains(1));
+        test.debug_print();
     }
 
     {
@@ -96,7 +97,9 @@ void TestSequential() {
         test.insert(3);
         test.insert(4);
         test.insert(5);
+        test.debug_print();
         assert(!test.insert(3));
+        test.debug_print();
 
         // validación de la inserción y eliminación
         test.remove(3);
@@ -104,6 +107,7 @@ void TestSequential() {
         test.remove(3);
         assert(!test.contains(3));
         assert(test.contains(5));
+        test.debug_print();
     }
 }
 
@@ -187,20 +191,11 @@ void RunTest(bool print) {
         threads[i]->join();
     }
 
-    if (print) {
-        cout << "Test on consurrent SkipListSet" << endl
-            << "==============================" << endl;
-
-        std::stringstream os;
-        os << endl;
-        lista.debug_print();
-        os << endl;
-        cout << os.str();
-    }
 }
 
 int main() {
-    freopen("output.txt", "w", stdout);
+    //freopen("output.txt", "w", stdout);
+    
     TestSequential();
     const int trials = 10;
     for (int i = 0; i < trials; ++i) {

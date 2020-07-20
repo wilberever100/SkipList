@@ -114,10 +114,15 @@ namespace ADE {
                     }
                 }
 
-                Node* new_node = new Node(level, data_type(data));
+                Node* new_node = new Node(max_level_, data_type(data));
                 for (unsigned int i = 0; i < level; ++i) {
-                    new_node->forward_[i] = predecessor[i]->forward_[i];
-                    predecessor[i]->forward_[i] = new_node;
+                    if (predecessor[i]) {
+                        new_node->forward_[i] = predecessor[i]->forward_[i];
+                        predecessor[i]->forward_[i] = new_node;
+                    }
+                    else {
+                        break;
+                    }
                 }
 
 
@@ -140,10 +145,12 @@ namespace ADE {
                 }
 
                 for (unsigned int i = 0; i < current_level_; ++i) {
-                    if (predecessor[i]->forward_[i] != it) {
-                        break;
+                    if (predecessor[i]) {
+                        if (predecessor[i]->forward_[i] != it) {
+                            break;
+                        }
+                        predecessor[i]->forward_[i] = it->forward_[i];
                     }
-                    predecessor[i]->forward_[i] = it->forward_[i];
                 }
                 unlocking_nodes(predecessor);
 
@@ -161,7 +168,10 @@ namespace ADE {
                 std::vector<Node*> predecessor;
                 bool x;
                 Node* it = find(data, &predecessor, x);
-
+                if (it && it->value_ == data) {
+                    it->source_.unlock();
+                }
+                unlocking_nodes(predecessor);
                 return (it != nullptr && it->value_ == data);
             }
             void clear() {
@@ -192,31 +202,59 @@ namespace ADE {
                 for (int i = current_level_ - 1; 0 <= i; --i) {
                     //This node will be locking while traveling
                     // Node* looking_for = nullptr;
-                    while (it->forward_[i] != nullptr &&
+                    while (it && it->forward_[i] != nullptr &&
                         compare_(it->forward_[i]->value_, data)) {
 
                         it = it->forward_[i];
                     }
 
-                    if (it->forward_[i] && it->forward_[i]->value_ == data && !found_first) {
-                        found_first = true;
+                    if (it) {
+                        bool come_in = false;
+                        int k=100;
+                        if (it->forward_[i] && it->forward_[i]->value_ == data && !found_first) {
+                            found_first = true;
+                            come_in = true;
+                            
+                            //if (!(it->forward_[i]->source_.try_lock())) {
 
-                        if (!(it->forward_[i]->source_.try_lock())) {
-                            it = back;
-                            i++;
-                            found_first = false;
-                            continue;
+                            k = try_lock(it->forward_[i]->source_, it->source_);
+                            if (k == 1) {
+                                //verifica si este thread es el que lo bloqueó, sino debe reiniciar para intentar darle lock
+                                if (it == back) {
+                                    if (!(it->forward_[i]->source_.try_lock())) {
+                                        it = back;
+                                        i++;
+                                        found_first = false;
+                                        continue;
+                                    }
+                                }
+                                else {
+                                    it = back;
+                                    i++;
+                                    found_first = false;
+                                    continue;
+                                }
+                            }
+
+                            /*if (k!=-1) {
+                                //cout << "locking: " << k << endl;
+                                it = back;
+                                i++;
+                                found_first = false;
+                                continue;
+                            }*/
                         }
+                        if (back != it && it && k!=-1) {
+
+                            it->source_.lock();
+
+
+                        }
+
                     }
-                    if (back != it && it) {
-
-                        it->source_.lock();
-
-
-                    }
-
                     (*predecessor)[i] = it;
                     back = it;
+                    
                 }
                 it = it->forward_[0];
 
